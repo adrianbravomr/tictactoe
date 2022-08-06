@@ -1,0 +1,188 @@
+body{
+    margin: 0px;
+    font-family: sans-serif;
+    background-color: rgb(218, 227, 238);
+}
+
+.modal{
+    z-index: 10;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.90);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: enter 0.1s ease-in-out;
+}
+
+@keyframes enter {
+    0% {background-color:rgba(0, 0, 0, 0.00);}
+    100% {background-color: rgba(0, 0, 0, 0.90);}
+}
+
+.header{
+    height: 50px;
+    background-color: black;
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+    color: white;
+    margin-bottom: 20px;
+    font-weight: 700;
+    font-size: 1.3rem;
+}
+
+.mainview{
+    display: grid;
+    grid-template-columns: 1fr 300px 1fr;
+    grid-template-rows: 1fr 300px 1fr;
+    grid-template-areas:
+    ". turn ."
+    ". game ."
+    ". reset .";
+}
+
+
+.turn{
+    display: none;
+    height: 50px;
+    grid-area: turn;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.game{
+    grid-area: game;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    border-radius: 20px;
+    background-color: white;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+    overflow: auto;
+    padding: 5px;
+}
+
+.cell{
+    display: flex;
+    background-color: rgba(0, 0, 0, 0.05);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 10px;
+    margin:5px;
+    font-family: 'Marker Felt';
+}
+
+.cell:hover{
+    transform: scale(1.1);
+    background-color: rgba(0, 0, 0, 0.1);
+    transition: all 0.1s;
+}
+
+.X,.O{
+    font-size: 2rem;
+    font-weight: bolder;
+}
+
+.X{
+    color: blue;
+}
+
+.O{
+    color: red;
+}
+
+.form{
+    right: 50%;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: whitesmoke;
+    padding: 20px;
+    border-radius: 10px;
+    animation: form 0.3s ease-out;
+    z-index: 20;
+}
+
+.form>legend{
+    text-align: center;
+    font-weight: bold;
+}
+
+.button{
+    width: 150px;
+    height: 40px;
+    font-size: 1.2rem;
+    align-self: center;
+    cursor: pointer;
+    background-color: rgb(93, 0, 255);
+    color: white;
+    border: 0px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.button:hover{
+    filter: brightness(0.7);
+}
+
+.button:active{
+    filter: brightness(0.5);
+    transform: scale(0.97);
+}
+
+.mainview>.button{
+    margin-top: 50px;
+    grid-area: reset;
+    width: 100%;
+}
+
+.checkbox,.color{
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes form {
+    0% {opacity: 0%;transform: translate(0px,-100px);}
+    100% {opacity: 100%;transform: translate(0px,0px);}
+}
+
+.input{
+    height: 2rem;
+    padding: 5px;
+    padding-left: 10px;
+    border-radius: 5px;
+    border: 0px solid lightgray;
+    font-size: 1rem;
+}
+
+input::placeholder{
+    opacity: 0.5;
+}
+
+input:required{
+    border: 2px solid gray;
+}
+
+input:required::placeholder{
+    opacity: 0.9;
+}
+
+#isRead{
+    width: 20px;
+}
+
+.msgSub{
+    color: rgba(255, 255, 255, 0.416);
+    font-weight: bold;
+    margin: 20px;
+}
