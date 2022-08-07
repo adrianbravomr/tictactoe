@@ -5,8 +5,10 @@ const Player = (name,symbol='X',IA=false) => {
 
 const game = ((doc) => {
 
-    let player1;
-    let player2;
+    let finished = false;
+    let moves=0;
+    let player1 = Player('Player 1','X');
+    let player2 = Player('Player 2','O');
     let turn = player1;
 
     let turnUI = doc.querySelector('.turn');
@@ -15,14 +17,14 @@ const game = ((doc) => {
 
     cellsUI.forEach( cell => {
         cell.addEventListener('click',(event)=>{
-            let row = cell.dataset.row;
-            let col = cell.dataset.col;
-            play(row,col);
+            let row = parseInt(cell.dataset.row);
+            let col = parseInt(cell.dataset.col);
+            if(!turn.IA) play(row,col);
         });
     });
 
     doc.querySelector('#reset').addEventListener('click', e => {
-        board.reset();
+        reset();
     })
 
     const configScreen = () => {
@@ -57,6 +59,7 @@ const game = ((doc) => {
             const player1 = Player(p1Name,'X',form['p1IA'].checked);
             const player2 = Player(p2Name,'O',form['p2IA'].checked);
             doc.querySelector('.modal').remove();
+            setTimeout(IAplay,1000);
             return  {player1,player2}
         }
         
@@ -99,8 +102,6 @@ const game = ((doc) => {
         doc.body.append(modal);
     }
 
-    configScreen();
-
     const board = (() => {
 
         let cells=[
@@ -108,66 +109,31 @@ const game = ((doc) => {
             ['','',''],
             ['','','']
         ];
-    
-        let moves=0;
-    
-    
+
         const updateCells = (value,row,col) =>{
 
-            let isValid = false;
-
-            if(cells[row][col]==''){
-                cells[row][col]=value;
-                isValid = true;
-                moves++;
-            }
-            //else console.log('Cell is already been used');
+            cells[row][col]=value;
 
             let winner = checkLines(row,col);
 
-            if(winner){
-                finish(winner);
-            };
-
-            if(moves>=9 && !winner){
-                finish('tie');
-            } 
-            return isValid;
-        }
-
-        const reset = () => {
-            moves = 0;
-            for(let row=0;row<=2;row++){
-                for(let col=0;col<=2;col++){
-                    cells[row][col]='';
-                    let cell = doc.querySelector(
-                        `[data-row="${row}"][data-col="${col}"]`
-                        )
-                    cell.textContent='';
-                    cell.classList.remove('X');
-                    cell.classList.remove('O');
-                }
-                turnUI.classList.remove(turn.symbol);
-                turn = player1;
-                turnUI.textContent='';
-            }
-
+            return {value,row,col,winner};
         }
     
         const getLine = (axis,pos) => {
             if(axis=='row')
-                return cells[pos]
+                return {'symbols':cells[pos],'coords':[[pos,0],[pos,1],[pos,2]]}
             else if(axis=='col')
-                return cells.map((x) => x[pos])
+                return {'symbols':cells.map((x) => x[pos]),'coords':[[0,pos],[1,pos],[2,pos]]}
             else if(axis=='diag')
-                return [cells[0][0],cells[1][1],cells[2][2]]
+                return {'symbols':[cells[0][0],cells[1][1],cells[2][2]],'coords':[[0,0],[1,1],[2,2]]}
             else if(axis=='invDiag')
-                return [cells[0][2],cells[1][1],cells[2][0]]
+                return {'symbols':[cells[0][2],cells[1][1],cells[2][0]],'coords':[[0,2],[1,1],[2,0]]}
         }
     
         const checkLine = (axis,pos,val) => {
-                return getLine(axis,pos).every
-                (cell => cell==val) ? val : false
+                let line = getLine(axis,pos)
+                return line.symbols.every
+                (cell => cell==val) ? {'symbol':val,'line':line} : false
         }
     
         const checkLines = (row,col) => {
@@ -177,22 +143,41 @@ const game = ((doc) => {
             || (checkLine('diag','',val))
             || (checkLine('invDiag','',val))
         }
+
+        const paintCells = (cells) => {
+            let coords = cells.line.coords;
+            coords.forEach(coord => {
+                cellsUI[coords2int(coord[0],coord[1])].classList.add('win')
+            })
+        }
     
-        return {cells,moves,updateCells,reset}
+        return {cells,updateCells,paintCells}
     
     })();
 
     const play = (row,col) =>{
-        let isValid = board.updateCells(turn.symbol,row,col);
-        if (isValid)    {
+        if(finished) reset();
+        if(board.cells[row][col]==''){
+            let movement = board.updateCells(turn.symbol,row,col);
+            moves++;
+
             let cell = doc.querySelector(
                 `[data-row="${row}"][data-col="${col}"]`
-                )
+            )
             cell.textContent=turn.symbol;
             cell.classList.add(turn.symbol);
-            switchPlayer();
+            console.log(movement);
+            if(movement.winner.symbol || (moves>=9 && !movement.winner.symbol)){
+                finish(movement.winner);
+            }
+            else{
+                switchPlayer();
+            }
+            return movement
         }
-        return isValid
+        else{
+            return false
+        }
     }
 
     const switchPlayer = () => {
@@ -200,44 +185,111 @@ const game = ((doc) => {
         turn = turn.name == player1.name ? player2: player1;
         turnUI.textContent=`${turn.name}'s turn`;
         turnUI.classList.add(turn.symbol);
+        console.log(`${turn.name} turn`)
+
+        //If IA is used
+        setTimeout(IAplay,1000);
     }
 
-    const finish = (winner) => {
-        if(winner){
-            
-
-            let who = winner == player1.symbol ? player1 : player2;
-
-            let msgContent = `Game finished! ${who.name} wins`;
-            let subContent = "Click anywhere to start again";
-
-            if(winner=='tie'){
-                msgContent = "It's a tie!";
+    const IAplay = () => {
+        if(!finished && ((player1.IA && turn.symbol==player1.symbol) 
+        || (player2.IA && turn.symbol==player2.symbol))){
+            let isValid = false;
+            let row,col;
+            while(!isValid){
+                row = random(3);
+                col = random(3);
+                isValid = (board.cells[row][col]=='');
             }
-
-            let modal = doc.createElement('div');
-
-            let msg = doc.createElement('div');
-            let msgSub = doc.createElement('div');
-            msg.textContent=msgContent;
-            msgSub.textContent=subContent;
-
-            msg.classList.add(who.symbol);
-            msgSub.classList.add('msgSub');
-            modal.classList.add('modal');
-
-            modal.addEventListener('click', e => {
-                e.preventDefault();
-                doc.querySelector('.modal').remove();
-                board.reset();
-            })
-
-
-            modal.append(msg,msgSub);
-            doc.body.append(modal);
+            play(row,col);
         }
     }
 
-    return{play};
+    const finish = (movement) => {
+        finished=true;
+        let who = movement.symbol == player1.symbol ? player1 : player2;
+
+        let msgContent = `Game finished! ${who.name} WINS`;
+        let subContent = "Click anywhere to start again";
+        let symbol = who.symbol;
+
+        if(!movement){
+            msgContent = "It's a tie!";
+            symbol = 'tie';
+        }
+        else{
+            board.paintCells(movement);
+        }
+
+        let modal = doc.createElement('div');
+
+        let msg = doc.createElement('div');
+        let msgSub = doc.createElement('div');
+        msg.textContent=msgContent;
+        msgSub.textContent=subContent;
+
+        msg.classList.add(symbol);
+        msg.classList.add('msg');
+        msgSub.classList.add('msgSub');
+        modal.classList.add('finish');
+
+        modal.addEventListener('click', e => {
+            e.preventDefault();
+            reset();
+        })
+
+        console.log(msgContent);
+        modal.append(msg,msgSub);
+        doc.body.append(modal);
+    }
+
+    const random = (max) => {
+        return Math.floor(Math.random() * max);
+    }
+
+    let int2cell = (int)  => {
+        return {'row':int2row(int),'col':int2col(int)}
+    }
+
+    let int2row = (int) => {
+        return parseInt(int/3)
+    }
+
+    let int2col = (int) => {
+        return parseInt(int%3)
+    }
+
+    let coords2int = (row,col) => {
+        return parseInt(row*3)+parseInt(col)
+    }
+
+    const reset = () => {
+        moves = 0;
+        let i = 0;
+
+        cellsUI.forEach( cell => {
+            board.cells[int2row(i)][int2col(i)]=''
+            cell.textContent='';
+            cell.classList.remove('win');
+            cell.classList.remove('X');
+            cell.classList.remove('O');
+            i++;
+        });
+
+        turnUI.classList.remove(turn.symbol);
+        turn = player1;
+        turnUI.textContent='';
+        finished=false;
+       let modal = doc.querySelector('.finish')
+       if(!!modal) modal.remove();
+       console.log('Tic-tac-toe!')
+       setTimeout(IAplay,1000);
+    }
+
+
+    configScreen();
+    reset();
+      
+    return{play,reset};
 
 })(document);

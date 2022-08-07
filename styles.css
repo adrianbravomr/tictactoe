@@ -4,13 +4,12 @@ body{
     background-color: rgb(218, 227, 238);
 }
 
-.modal{
+.modal,.finish{
     z-index: 10;
     position: absolute;
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.90);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -18,9 +17,17 @@ body{
     animation: enter 0.1s ease-in-out;
 }
 
+.modal{
+    background-color: rgba(0, 0, 0, 0.90);
+}
+
+.finish{
+    background-color: rgba(0, 0, 0, 0.70);
+}
+
 @keyframes enter {
     0% {background-color:rgba(0, 0, 0, 0.00);}
-    100% {background-color: rgba(0, 0, 0, 0.90);}
+    100% {background-color: rgba(0, 0, 0, 0.70);}
 }
 
 .header{
@@ -85,7 +92,7 @@ body{
     transition: all 0.1s;
 }
 
-.X,.O{
+.X,.O,.tie{
     font-size: 2rem;
     font-weight: bolder;
 }
@@ -96,6 +103,14 @@ body{
 
 .O{
     color: red;
+}
+
+.tie{
+    color: rgb(224, 224, 48);
+}
+
+.win{
+    background-color: rgb(127, 197, 127);
 }
 
 .form{
@@ -179,6 +194,10 @@ input:required::placeholder{
 
 #isRead{
     width: 20px;
+
+}
+.msg{
+    font-size: 1.7rem;
 }
 
 .msgSub{
