@@ -5,6 +5,7 @@ const Player = (name,symbol='X',IA=false) => {
 
 const game = ((doc) => {
 
+    let calcCount=0;
     let finished = false;
     let winner='';
     let moves=0;
@@ -209,8 +210,7 @@ const game = ((doc) => {
         || (player2.IA && turn.symbol==player2.symbol))){
             let row,col;
             let moves = board.availableMoves(board.cells).length;
-            console.log(moves);
-            if(moves>=8){
+            if(!true || moves==9){
                 let isValid = false;
                 while(!isValid){
                     row = random(3);
@@ -222,6 +222,8 @@ const game = ((doc) => {
                 let ans = miniMAX();
                 row=int2row(ans.pos);
                 col=int2col(ans.pos);
+                //console.log(ans);
+                calcCount=0;
             }
             play(row,col);
         }
@@ -229,14 +231,13 @@ const game = ((doc) => {
 
     ///miniMAX algorithm. Work on progress, need some changes to be smarter
     const miniMAX = (state,player,winner=false) => {
-
+        calcCount++;
         let fakeState;
 
         if(state==undefined){
             fakeState=copy(board.cells)
         }
         else fakeState=copy(state)
-        //console.table(fakeState);
 
         if(player==undefined) player=turn.symbol;
 
@@ -244,45 +245,43 @@ const game = ((doc) => {
     
         max_player = turn.symbol;
         other_player = player == 'X' ? 'O':'X';
-
-        //console.log(max_player,other_player,player);
        
-        if(winner && winner.symbol==other_player){
-            return {'pos':null,'score':(other_player==max_player ? 1:-1)*(availableMoves.length+1)}
+        if(winner){
+            return {'pos':null,'count':null,'score':(other_player==max_player ? 1:-1)*(availableMoves.length+1)}
         }
         else if(availableMoves.length<=0){
-            return {'pos':null,'score':0}
+            return {'pos':null,'count':null,'score':0}
         }
         
         if(player==max_player){
-            var best = {'pos':null,'score':-Infinity}
+            var best = {'pos':null,'count':null,'score':-Infinity}
         }
         else{
-            var best = {'pos':null,'score':+Infinity}
+            var best = {'pos':null,'count':null,'score':+Infinity}
         }
-        //console.log(best);
 
         availableMoves.forEach(move => {
-
             let row=int2row(move);
             let col=int2col(move);
 
-            fakeState[row][col]=turn.symbol;
+            fakeState[row][col]=player;
 
             let current_winner = board.checkLines(fakeState,row,col);
 
-            let movement = miniMAX(fakeState,other_player,current_winner);
+            let movement = 
+            miniMAX(fakeState,other_player,current_winner);
 
             fakeState[row][col]='';
             current_winner=false;
             movement.pos=move;
-
+            movement.count=calcCount;
             if(player==max_player){
                 if(movement.score > best.score) best=movement;
             }
             else{
                 if(movement.score < best.score) best=movement;
             }
+            //console.log(best);
         })
         return best
     }
@@ -384,6 +383,6 @@ const game = ((doc) => {
     configScreen();
     reset();
       
-    return{play,reset,miniMAX};
+    return{play,reset};
 
 })(document);
