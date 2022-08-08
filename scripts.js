@@ -6,6 +6,7 @@ const Player = (name,symbol='X',IA=false) => {
 const game = ((doc) => {
 
     let finished = false;
+    let winner='';
     let moves=0;
     let player1 = Player('Player 1','X');
     let player2 = Player('Player 2','O');
@@ -114,12 +115,12 @@ const game = ((doc) => {
 
             cells[row][col]=value;
 
-            let winner = checkLines(row,col);
+            let winner = checkLines(cells,row,col);
 
             return {value,row,col,winner};
         }
     
-        const getLine = (axis,pos) => {
+        const getLine = (cells,axis,pos) => {
             if(axis=='row')
                 return {'symbols':cells[pos],'coords':[[pos,0],[pos,1],[pos,2]]}
             else if(axis=='col')
@@ -130,18 +131,18 @@ const game = ((doc) => {
                 return {'symbols':[cells[0][2],cells[1][1],cells[2][0]],'coords':[[0,2],[1,1],[2,0]]}
         }
     
-        const checkLine = (axis,pos,val) => {
-                let line = getLine(axis,pos)
+        const checkLine = (cells,axis,pos,val) => {
+                let line = getLine(cells,axis,pos)
                 return line.symbols.every
                 (cell => cell==val) ? {'symbol':val,'line':line} : false
         }
     
-        const checkLines = (row,col) => {
+        const checkLines = (cells,row,col) => {
             let val = cells[row][col];
-            return (checkLine('row',row,val))
-            || (checkLine('col',col,val))
-            || (checkLine('diag','',val))
-            || (checkLine('invDiag','',val))
+            return (checkLine(cells,'row',row,val))
+            || (checkLine(cells,'col',col,val))
+            || (checkLine(cells,'diag','',val))
+            || (checkLine(cells,'invDiag','',val))
         }
 
         const paintCells = (cells) => {
@@ -150,8 +151,20 @@ const game = ((doc) => {
                 cellsUI[coords2int(coord[0],coord[1])].classList.add('win')
             })
         }
+
+        const availableMoves = (cells) => {
+            let available=[]
+            let i=0;
+            cells.forEach(row => {
+                row.forEach(cell => {
+                    if(cells[int2row(i)][int2col(i)]=='') available.push(i)
+                    i++;
+                })
+            })
+            return available;
+        }
     
-        return {cells,updateCells,paintCells}
+        return {cells,updateCells,paintCells,availableMoves,checkLines}
     
     })();
 
@@ -194,18 +207,88 @@ const game = ((doc) => {
     const IAplay = () => {
         if(!finished && ((player1.IA && turn.symbol==player1.symbol) 
         || (player2.IA && turn.symbol==player2.symbol))){
-            let isValid = false;
             let row,col;
-            while(!isValid){
-                row = random(3);
-                col = random(3);
-                isValid = (board.cells[row][col]=='');
+            let moves = board.availableMoves(board.cells).length;
+            console.log(moves);
+            if(moves>=8){
+                let isValid = false;
+                while(!isValid){
+                    row = random(3);
+                    col = random(3);
+                    isValid = (board.cells[row][col]=='');
+                }
+            }
+            else{
+                let ans = miniMAX();
+                row=int2row(ans.pos);
+                col=int2col(ans.pos);
             }
             play(row,col);
         }
     }
 
+    ///miniMAX algorithm. Work on progress, need some changes to be smarter
+    const miniMAX = (state,player,winner=false) => {
+
+        let fakeState;
+
+        if(state==undefined){
+            fakeState=copy(board.cells)
+        }
+        else fakeState=copy(state)
+        //console.table(fakeState);
+
+        if(player==undefined) player=turn.symbol;
+
+        let availableMoves = board.availableMoves(fakeState);
+    
+        max_player = turn.symbol;
+        other_player = player == 'X' ? 'O':'X';
+
+        //console.log(max_player,other_player,player);
+       
+        if(winner && winner.symbol==other_player){
+            return {'pos':null,'score':(other_player==max_player ? 1:-1)*(availableMoves.length+1)}
+        }
+        else if(availableMoves.length<=0){
+            return {'pos':null,'score':0}
+        }
+        
+        if(player==max_player){
+            var best = {'pos':null,'score':-Infinity}
+        }
+        else{
+            var best = {'pos':null,'score':+Infinity}
+        }
+        //console.log(best);
+
+        availableMoves.forEach(move => {
+
+            let row=int2row(move);
+            let col=int2col(move);
+
+            fakeState[row][col]=turn.symbol;
+
+            let current_winner = board.checkLines(fakeState,row,col);
+
+            let movement = miniMAX(fakeState,other_player,current_winner);
+
+            fakeState[row][col]='';
+            current_winner=false;
+            movement.pos=move;
+
+            if(player==max_player){
+                if(movement.score > best.score) best=movement;
+            }
+            else{
+                if(movement.score < best.score) best=movement;
+            }
+        })
+        return best
+    }
+
     const finish = (movement) => {
+        console.log(movement);
         finished=true;
         let who = movement.symbol == player1.symbol ? player1 : player2;
 
@@ -218,6 +301,7 @@ const game = ((doc) => {
             symbol = 'tie';
         }
         else{
+            winner=turn;
             board.paintCells(movement);
         }
 
@@ -247,6 +331,18 @@ const game = ((doc) => {
         return Math.floor(Math.random() * max);
     }
 
+    const copy = (arr) => {
+        let newCopy = [];
+        arr.forEach(elem => {
+          if(Array.isArray(elem)){
+            newCopy.push(copy(elem))
+          }else{
+            newCopy.push(elem)
+          }
+        })
+        return newCopy;
+      }
+
     let int2cell = (int)  => {
         return {'row':int2row(int),'col':int2col(int)}
     }
@@ -265,9 +361,8 @@ const game = ((doc) => {
 
     const reset = () => {
         moves = 0;
-        let i = 0;
-
-        cellsUI.forEach( cell => {
+        winner = '';
+        cellsUI.forEach( (cell,i) => {
             board.cells[int2row(i)][int2col(i)]=''
             cell.textContent='';
             cell.classList.remove('win');
@@ -286,10 +381,9 @@ const game = ((doc) => {
        setTimeout(IAplay,1000);
     }
 
-
     configScreen();
     reset();
       
-    return{play,reset};
+    return{play,reset,miniMAX};
 
 })(document);

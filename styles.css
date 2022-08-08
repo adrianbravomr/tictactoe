@@ -111,6 +111,9 @@ body{
 
 .win{
     background-color: rgb(127, 197, 127);
+    border-radius: 50%;
+    transform: scale(1.05);
+    transition: all 0.3s;
 }
 
 .form{
@@ -198,6 +201,10 @@ input:required::placeholder{
 }
 .msg{
     font-size: 1.7rem;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.585);
+    backdrop-filter: blur(5px);
+    border-radius: 20px;
 }
 
 .msgSub{
