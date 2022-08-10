@@ -5,7 +5,6 @@ const Player = (name,symbol='X',IA=false) => {
 
 const game = ((doc) => {
 
-    let calcCount=0;
     let finished = false;
     let winner='';
     let moves=0;
@@ -31,11 +30,12 @@ const game = ((doc) => {
 
     const configScreen = () => {
 
-        function formInput(type,placeholder='',required=false){
+        function formInput(type,placeholder='',required=false,val=''){
             let formIn = doc.createElement("input");
             formIn.classList.add("input");
             formIn.setAttribute("type",type);
             formIn.setAttribute("name",placeholder);
+            if(type=='radio')formIn.setAttribute("value",val);
             let desc = placeholder;
             if(required) desc = `${placeholder}*`;
             formIn.setAttribute("placeholder",desc);
@@ -58,10 +58,10 @@ const game = ((doc) => {
             p1Name = p1Name == '' ? 'Player 1': p1Name
             p2Name = p2Name == '' ? 'Player 2': p2Name
 
-            const player1 = Player(p1Name,'X',form['p1IA'].checked);
-            const player2 = Player(p2Name,'O',form['p2IA'].checked);
+            const player1 = Player(p1Name,'X',form['p1IA'].value);
+            const player2 = Player(p2Name,'O',form['p2IA'].value);
             doc.querySelector('.modal').remove();
-            setTimeout(IAplay,1000);
+            setTimeout(IAplay,500);
             return  {player1,player2}
         }
         
@@ -91,8 +91,10 @@ const game = ((doc) => {
         p1IA.classList.add('checkbox');
         p2IA.classList.add('checkbox');
 
-        p1IA.append(formInput('checkbox','p1IA'),formLabel('p1IA','CPU controlled'));
-        p2IA.append(formInput('checkbox','p2IA'),formLabel('p2IA','CPU controlled'));
+        p1IA.append(formInput('radio','p1IA',false,'1'),formLabel('p1IA','CPU Easy'));
+        p1IA.append(formInput('radio','p1IA',false,'2'),formLabel('p1IA','CPU Hard'));
+        p2IA.append(formInput('radio','p2IA',false,'1'),formLabel('p2IA','CPU Easy'));
+        p2IA.append(formInput('radio','p2IA',false,'2'),formLabel('p2IA','CPU Hard'));
 
         let submitBtn=document.createElement("button");
         submitBtn.setAttribute("action","submit");
@@ -146,6 +148,18 @@ const game = ((doc) => {
             || (checkLine(cells,'invDiag','',val))
         }
 
+        const checkWinner = (cells) =>{
+            for(let row=0;row<=2;row++){
+                for(let col=0;col<=2;col++){
+                    let ans = checkLines(cells,row,col);
+                    let isWinner = ans.symbol;
+                    if(!!isWinner) return ans;
+                }
+            }
+            if(availableMoves(cells).length<=0) return {'symbol':'tie'}
+            return false;
+        }
+
         const paintCells = (cells) => {
             let coords = cells.line.coords;
             coords.forEach(coord => {
@@ -165,7 +179,8 @@ const game = ((doc) => {
             return available;
         }
     
-        return {cells,updateCells,paintCells,availableMoves,checkLines}
+        return {cells,updateCells,paintCells,
+            availableMoves,checkLines,checkWinner}
     
     })();
 
@@ -202,15 +217,21 @@ const game = ((doc) => {
         console.log(`${turn.name} turn`)
 
         //If IA is used
-        setTimeout(IAplay,1000);
+        setTimeout(IAplay,500);
     }
 
     const IAplay = () => {
-        if(!finished && ((player1.IA && turn.symbol==player1.symbol) 
-        || (player2.IA && turn.symbol==player2.symbol))){
+        if(!finished && 
+            ((player1.IA && turn.symbol==player1.symbol) 
+            ||(player2.IA && turn.symbol==player2.symbol)))
+            {
             let row,col;
             let moves = board.availableMoves(board.cells).length;
-            if(!true || moves==9){
+            if(
+                moves==9 
+                || (player1.IA==1 && turn.symbol==player1.symbol)
+                || player2.IA==1 && turn.symbol==player2.symbol)
+                {
                 let isValid = false;
                 while(!isValid){
                     row = random(3);
@@ -218,72 +239,56 @@ const game = ((doc) => {
                     isValid = (board.cells[row][col]=='');
                 }
             }
-            else{
+            else if(
+                (player1.IA && turn.symbol==player1.symbol)
+                ||(player2.IA && turn.symbol==player2.symbol))
+                {
                 let ans = miniMAX();
                 row=int2row(ans.pos);
                 col=int2col(ans.pos);
                 //console.log(ans);
-                calcCount=0;
             }
             play(row,col);
         }
     }
 
-    ///miniMAX algorithm. Work on progress, need some changes to be smarter
-    const miniMAX = (state,player,winner=false) => {
-        calcCount++;
-        let fakeState;
+    const miniMAX = (state,pos=0,depth=0,isMax=true) => {
 
-        if(state==undefined){
-            fakeState=copy(board.cells)
-        }
-        else fakeState=copy(state)
-
-        if(player==undefined) player=turn.symbol;
-
-        let availableMoves = board.availableMoves(fakeState);
-    
-        max_player = turn.symbol;
-        other_player = player == 'X' ? 'O':'X';
-       
-        if(winner){
-            return {'pos':null,'count':null,'score':(other_player==max_player ? 1:-1)*(availableMoves.length+1)}
-        }
-        else if(availableMoves.length<=0){
-            return {'pos':null,'count':null,'score':0}
-        }
+        if (state==undefined) state=copy(board.cells)
+        let availableMoves = board.availableMoves(state);
+        let isWinner = board.checkWinner(state);
         
-        if(player==max_player){
-            var best = {'pos':null,'count':null,'score':-Infinity}
-        }
-        else{
-            var best = {'pos':null,'count':null,'score':+Infinity}
-        }
-
-        availableMoves.forEach(move => {
-            let row=int2row(move);
-            let col=int2col(move);
-
-            fakeState[row][col]=player;
-
-            let current_winner = board.checkLines(fakeState,row,col);
-
-            let movement = 
-            miniMAX(fakeState,other_player,current_winner);
-
-            fakeState[row][col]='';
-            current_winner=false;
-            movement.pos=move;
-            movement.count=calcCount;
-            if(player==max_player){
-                if(movement.score > best.score) best=movement;
+        if(!!isWinner){
+            let modifier = isWinner.symbol==turn.symbol ? 1 : -1;
+            if(isWinner.symbol=='tie') modifier=0;
+            return {
+                'pos':pos,
+                'depth':depth,
+                'score':modifier*(availableMoves.length+1)
             }
-            else{
-                if(movement.score < best.score) best=movement;
+        }
+        let bestScore = isMax? -Infinity : +Infinity;
+        let bestMove;
+        availableMoves.forEach( (move) => {
+
+            let symbol = isMax ? turn.symbol:(turn.symbol=='X' ? 'O':'X');
+            state[int2row(move)][int2col(move)]=symbol;
+            let movement = miniMAX(state,move,depth+1,isMax? false:true);
+            state[int2row(move)][int2col(move)]='';
+
+            if((movement.score>bestScore && isMax) 
+            || (movement.score<bestScore && !isMax)){
+                bestScore = movement.score;
+                bestMove = move;
             }
-            //console.log(best);
         })
-        return best
+        let bestPlay = {
+            'pos':bestMove,
+            'depth':depth,
+            'score':bestScore
+        };
+        //console.log(bestPlay);
+        return bestPlay;
     }
 
     const finish = (movement) => {
@@ -342,7 +347,7 @@ const game = ((doc) => {
         return newCopy;
       }
 
-    let int2cell = (int)  => {
+    let int2coords = (int)  => {
         return {'row':int2row(int),'col':int2col(int)}
     }
 
@@ -377,7 +382,7 @@ const game = ((doc) => {
        let modal = doc.querySelector('.finish')
        if(!!modal) modal.remove();
        console.log('Tic-tac-toe!')
-       setTimeout(IAplay,1000);
+       setTimeout(IAplay,500);
     }
 
     configScreen();
